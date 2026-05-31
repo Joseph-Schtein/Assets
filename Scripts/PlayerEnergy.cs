@@ -46,9 +46,11 @@ public class PlayerEnergy : MonoBehaviour
     private LightSpawner spawner;
     private LightcycleAI _aiComponent;
     private Material trailMat;
+    private bool _trailInitialised;
     private bool hasTriggeredNextSpawn;
     private bool illuminatedThisFrame;
     private float _lastEnergyPercent = -1f;
+    private Color _lastTrailColor = new Color(-1, -1, -1, -1); // sentinel
     private static readonly Collider[] _hitCache = new Collider[64];
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -147,55 +149,26 @@ public class PlayerEnergy : MonoBehaviour
     private void InitTrailMaterial()
     {
         if (sparkTrail == null) return;
-        if (trailMat != null) return; // Already initialised
+        if (_trailInitialised) return; // Already run
+        _trailInitialised = true;
 
-        // If the prefab has no material on the TrailRenderer, create one
-        if (sparkTrail.sharedMaterial == null)
-            sparkTrail.sharedMaterial = CreateTrailMaterial();
-
-        trailMat = sparkTrail.material; // Runtime instance
-        trailMat.EnableKeyword("_EMISSION");
-        trailMat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        // If a material is assigned (e.g. tail.mat), grab an instance so we can
+        // tint it at runtime. If no material is assigned, leave trailMat null and
+        // rely entirely on the gradient vertex colour, which is what makes the
+        // human player's trail visible (the baked yellow gradient + default material).
+        if (sparkTrail.sharedMaterial != null)
+        {
+            trailMat = sparkTrail.material;
+            trailMat.EnableKeyword("_EMISSION");
+        }
 
         sparkTrail.emitting = true;
 
-        // Apply the current color
+        // Seed the gradient with the correct bike colour immediately
         Color c = fullEnergyColor != Color.clear ? fullEnergyColor : Color.white;
         SyncTrailColor(c, trailBrightness);
     }
 
-    /// <summary>
-    /// Creates a URP Lit transparent + emissive material from scratch.
-    /// Mirrors the settings in Assets/Materials/tail.mat.
-    /// </summary>
-    private static Material CreateTrailMaterial()
-    {
-        Shader shader = Shader.Find("Universal Render Pipeline/Lit")
-                     ?? Shader.Find("Universal Render Pipeline/Unlit")
-                     ?? Shader.Find("Sprites/Default");
-
-        Material mat = new Material(shader) { name = "Trail_Runtime" };
-
-        // Transparency
-        mat.SetFloat("_Surface", 1f);       // Transparent
-        mat.SetFloat("_Blend", 2f);         // Multiply
-        mat.SetFloat("_SrcBlend", 5f);      // SrcAlpha
-        mat.SetFloat("_DstBlend", 1f);      // One (additive glow)
-        mat.SetFloat("_SrcBlendAlpha", 1f);
-        mat.SetFloat("_DstBlendAlpha", 1f);
-        mat.SetFloat("_ZWrite", 0f);
-        mat.SetFloat("_Cull", 0f);          // Double-sided
-        mat.renderQueue = 3000;
-
-        mat.EnableKeyword("_EMISSION");
-        mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-
-        mat.SetColor("_BaseColor", Color.white);
-        mat.SetColor("_Color", Color.white);
-        mat.SetColor("_EmissionColor", Color.white);
-
-        return mat;
-    }
 
     // ═══════════════════════════════════════════════════════════════════════
     //  COLOR
@@ -233,38 +206,49 @@ public class PlayerEnergy : MonoBehaviour
     /// </summary>
     public void SyncTrailColor(Color colour, float brightness)
     {
-        // Make sure the material exists (handles calls before Start)
-        if (trailMat == null)
+        // Make sure InitTrailMaterial has run (handles calls before Start)
+        if (!_trailInitialised)
             InitTrailMaterial();
 
-        if (trailMat != null)
-        {
-            float safe = Mathf.Clamp(brightness, 10f, 200f);
-            Color hdr = colour * safe;
-            hdr.a = 1f;
-            trailMat.SetColor("_BaseColor", hdr);
-            trailMat.SetColor("_Color", hdr);
-            trailMat.SetColor("_EmissionColor", hdr);
-        }
-
-        // Set gradient: white vertex colour (material provides the hue),
-        // with a gentle alpha fade at the tail end
+        // KEY INSIGHT: The gradient vertex colour IS the trail colour.
+        // Use sparkLight.color as the source so trail always matches the spotlight.
         if (sparkTrail != null)
         {
+            Color source = (sparkLight != null) ? sparkLight.color : colour;
+            Color ldrColor = new Color(
+                Mathf.Clamp01(source.r),
+                Mathf.Clamp01(source.g),
+                Mathf.Clamp01(source.b),
+                1f);
+
             Gradient grad = new Gradient();
             grad.SetKeys(
                 new GradientColorKey[]
                 {
-                    new GradientColorKey(Color.white, 0f),
-                    new GradientColorKey(Color.white, 1f)
+                    new GradientColorKey(ldrColor, 0f),
+                    new GradientColorKey(ldrColor, 1f)
                 },
                 new GradientAlphaKey[]
                 {
                     new GradientAlphaKey(1f, 0f),
-                    new GradientAlphaKey(0.3f, 1f)
+                    new GradientAlphaKey(0.4f, 1f)
                 }
             );
             sparkTrail.colorGradient = grad;
+        }
+
+        // Also drive the material's emission for HDR bloom on top of the LDR colour.
+        // Use sparkLight.color as the authoritative source (same as the gradient above)
+        // so the material emission always matches the spotlight — not the stale fullEnergyColor.
+        if (trailMat != null)
+        {
+            Color matSource = (sparkLight != null) ? sparkLight.color : colour;
+            float safe = Mathf.Clamp(brightness, 1f, 200f);
+            Color hdr = matSource * safe;
+            hdr.a = 1f;
+            trailMat.SetColor("_BaseColor", hdr);
+            trailMat.SetColor("_Color", hdr);
+            trailMat.SetColor("_EmissionColor", hdr);
         }
 
         _lastEnergyPercent = -1f; // Force visual refresh
@@ -278,33 +262,94 @@ public class PlayerEnergy : MonoBehaviour
     {
         float pct = currentEnergy / maxEnergy;
 
-        // Spot light stays at constant full intensity — it's an identity glow, not a battery meter.
-        // (Trail width and colour already communicate energy level.)
+        // Spot light stays at constant full intensity
         if (sparkLight != null)
             sparkLight.intensity = maxLightIntensity * 5f;
 
-        // Trail width + material colour
-        if (sparkTrail != null && trailMat != null)
+        if (sparkTrail != null)
         {
-            float w = Mathf.Max(1.5f, pct * maxTrailWidth);
+            // Trail width scales with energy — minimum 3 so it's always visible
+            float w = Mathf.Max(3f, pct * maxTrailWidth);
             if (Mathf.Abs(sparkTrail.widthMultiplier - w) > 0.05f)
                 sparkTrail.widthMultiplier = w;
 
-            // Only update material when energy changes meaningfully
-            if (Mathf.Abs(_lastEnergyPercent - pct) > 0.01f)
+            // Force the trail gradient to match the spotlight color every frame.
+            // No caching guard — we need this to always reflect the current color.
+            ApplyTrailGradient();
+
+            // Material HDR emission — only update on energy change
+            if (trailMat != null && Mathf.Abs(_lastEnergyPercent - pct) > 0.01f)
             {
                 _lastEnergyPercent = pct;
-                Color base_ = Color.Lerp(lowEnergyColor, fullEnergyColor, pct);
-                base_.a = 1f;
-
-                float safe = Mathf.Clamp(trailBrightness, 10f, 200f);
-                Color hdr = base_ * safe;
+                Color source = (sparkLight != null) ? sparkLight.color : fullEnergyColor;
+                // All three colour slots get the HDR value so the trail glows brightly.
+                // The vertex gradient is white (see ApplyTrailGradient) so it doesn't dim this.
+                float bloomBoost = Mathf.Clamp(trailBrightness, 1f, 500f);
+                Color hdr = source * bloomBoost;
                 hdr.a = 1f;
                 trailMat.SetColor("_BaseColor", hdr);
                 trailMat.SetColor("_Color", hdr);
                 trailMat.SetColor("_EmissionColor", hdr);
             }
         }
+    }
+
+    // Safety net: re-apply the gradient in LateUpdate as well, in case something
+    // else overwrites it during Update (e.g. another script or internal Unity code).
+    void LateUpdate()
+    {
+        if (isDead || sparkTrail == null) return;
+        ApplyTrailGradient();
+    }
+
+    /// <summary>
+    /// Builds and applies a trail gradient that matches the current spotlight color.
+    /// Always uses sparkLight.color as the authoritative source.
+    /// </summary>
+    private void ApplyTrailGradient()
+    {
+        if (sparkTrail == null) return;
+        Color source = (sparkLight != null) ? sparkLight.color : fullEnergyColor;
+
+        Gradient grad = new Gradient();
+
+        if (trailMat != null)
+        {
+            // When a material is driving the trail, set vertex colors to WHITE so the
+            // material's _BaseColor/_EmissionColor controls the hue and brightness fully.
+            // This prevents the LDR vertex color from dimming the HDR material emission.
+            grad.SetKeys(
+                new GradientColorKey[] {
+                    new GradientColorKey(Color.white, 0f),
+                    new GradientColorKey(Color.white, 1f)
+                },
+                new GradientAlphaKey[] {
+                    new GradientAlphaKey(1f, 0f),
+                    new GradientAlphaKey(0.8f, 1f)
+                }
+            );
+        }
+        else
+        {
+            // No material — vertex color IS the trail color (human player path)
+            Color ldrBase = new Color(
+                Mathf.Clamp01(source.r),
+                Mathf.Clamp01(source.g),
+                Mathf.Clamp01(source.b),
+                1f);
+            grad.SetKeys(
+                new GradientColorKey[] {
+                    new GradientColorKey(ldrBase, 0f),
+                    new GradientColorKey(ldrBase, 1f)
+                },
+                new GradientAlphaKey[] {
+                    new GradientAlphaKey(1f, 0f),
+                    new GradientAlphaKey(0.6f, 1f)
+                }
+            );
+        }
+
+        sparkTrail.colorGradient = grad;
     }
 
     // ═══════════════════════════════════════════════════════════════════════

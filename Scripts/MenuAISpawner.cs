@@ -168,6 +168,10 @@ public class MenuAISpawner : MonoBehaviour
             // Colour the spark (headlight-style) light
             if (energy.sparkLight != null)
                 energy.sparkLight.color = bikeColor;
+
+            // Seed the trail gradient NOW so it's never a stale colour.
+            // SyncTrailColor is safe to call before Start() — it self-initialises.
+            energy.SyncTrailColor(bikeColor, energy.trailBrightness);
         }
 
         // Tint body mesh renderers

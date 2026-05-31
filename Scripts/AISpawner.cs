@@ -1,4 +1,7 @@
 using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
+
 public class AISpawner : MonoBehaviour
 {
     [Header("Spawn Settings")]
@@ -13,6 +16,10 @@ public class AISpawner : MonoBehaviour
         "Cameron", "Drew", "Jesse", "Rowan", "Hayden", "Kendall", "Peyton", "Reese", "Dakota", "Micah",
         "Sam", "Charlie", "Blake", "Logan", "Dylan", "Finley", "Emerson", "Parker", "Phoenix", "River"
     };
+
+    // Track spawned AIs and their assigned colors for the deferred resync
+    private readonly List<GameObject> _spawnedAIs = new List<GameObject>();
+    private readonly List<Color> _spawnedColors = new List<Color>();
 
     void Start()
     {
@@ -43,8 +50,6 @@ public class AISpawner : MonoBehaviour
             gameField.transform.localScale = new Vector3(scale, 1f, scale);
         }
 
-
-
         float spawnRange = Mathf.Max(0, arenaLimit - spawnBuffer);
         for (int i = 0; i < spawnCount; i++)
         {
@@ -59,13 +64,78 @@ public class AISpawner : MonoBehaviour
             // Assign a random human name to the AI player
             string randomName = aiNames[Random.Range(0, aiNames.Length)];
             newAI.name = randomName;
+            newAI.tag = "AI"; // Ensure the tag is always set regardless of prefab default
 
-            // Assign a random color — ApplyRandomColor() updates trail material, renderers & lights
+            // Pick a random color and apply it immediately
+            Color bikeColor = Random.ColorHSV(0f, 1f, 0.8f, 1f, 0.9f, 1f);
+            _spawnedAIs.Add(newAI);
+            _spawnedColors.Add(bikeColor);
+
             PlayerEnergy energy = newAI.GetComponent<PlayerEnergy>();
             if (energy != null)
             {
-                energy.ApplyRandomColor();
+                // Set colors + light before Start() runs
+                energy.fullEnergyColor = bikeColor;
+                Color dimColor = bikeColor * 0.2f;
+                dimColor.a = 1f;
+                energy.lowEnergyColor = dimColor;
+
+                if (energy.sparkLight != null)
+                    energy.sparkLight.color = bikeColor;
+
+                // First-pass trail sync (trailMat initialises from the prefab-assigned material)
+                energy.SyncTrailColor(bikeColor, energy.trailBrightness);
             }
+        }
+
+        // Re-sync trail colors one frame later, after all PlayerEnergy.Start() methods
+        // have run and fully initialised their trail material instances.
+        StartCoroutine(ResyncTrailColorsNextFrame());
+    }
+
+    /// <summary>
+    /// Waits one frame so every AI's PlayerEnergy.Start() has finished, then
+    /// re-applies the bike colour so the trail gradient and material both match
+    /// the spotlight color exactly.
+    /// </summary>
+    private IEnumerator ResyncTrailColorsNextFrame()
+    {
+        yield return null; // wait one full frame
+
+        for (int i = 0; i < _spawnedAIs.Count; i++)
+        {
+            GameObject ai = _spawnedAIs[i];
+            if (ai == null) continue;
+
+            Color bikeColor = _spawnedColors[i];
+            PlayerEnergy energy = ai.GetComponent<PlayerEnergy>();
+            if (energy == null) continue;
+
+            // Set the light color — use sparkLight if wired up, otherwise
+            // find the first Light component in children as a fallback.
+            if (energy.sparkLight != null)
+            {
+                energy.sparkLight.color = bikeColor;
+            }
+            else
+            {
+                // sparkLight reference may be broken; find it manually
+                Light foundLight = ai.GetComponentInChildren<Light>(true);
+                if (foundLight != null)
+                {
+                    energy.sparkLight = foundLight; // wire it up for runtime
+                    foundLight.color = bikeColor;
+                }
+            }
+
+            // Force fullEnergyColor to bikeColor so UpdateVisuals() fallback is correct
+            energy.fullEnergyColor = bikeColor;
+
+            // Clear any trail segments emitted with the wrong colour, then resync
+            if (energy.sparkTrail != null)
+                energy.sparkTrail.Clear();
+
+            energy.SyncTrailColor(bikeColor, energy.trailBrightness);
         }
     }
 }
