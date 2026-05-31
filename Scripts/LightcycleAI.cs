@@ -86,15 +86,6 @@ public class LightcycleAI : Agent
         if (_playerEnergy == null)
             Debug.LogWarning($"{name}: No PlayerEnergy component found! AI state decisions will fall back to currentCharge.");
 
-        // Compensate for AI hovering at Y=0.1 by raising the light to local Y=0.9
-        // This ensures the Spot Light (Y=1.0 world) matches the human player's light size
-        if (_playerEnergy != null && _playerEnergy.sparkLight != null)
-        {
-            Vector3 lightPos = _playerEnergy.sparkLight.transform.localPosition;
-            lightPos.y = 0.9f;
-            _playerEnergy.sparkLight.transform.localPosition = lightPos;
-        }
-
         var bp = GetComponent<BehaviorParameters>();
         bp.BehaviorName = "LightcycleAI";
         // 1 Continuous Action for steering (-1 to 1)
@@ -605,7 +596,7 @@ public class LightcycleAI : Agent
         transform.position += currentMoveDirection * currentSpeed * Time.deltaTime;
         transform.position = new Vector3(
             Mathf.Clamp(transform.position.x, -arenaLimit, arenaLimit),
-            0.1f,
+            1f,
             Mathf.Clamp(transform.position.z, -arenaLimit, arenaLimit));
 
         if (currentMoveDirection != Vector3.zero)
@@ -963,6 +954,15 @@ public class LightcycleAI : Agent
         foreach (var c in colliders) c.enabled = true;
         foreach (var r in renderers) r.enabled = true;
         foreach (var l in lights) l.enabled = true;
+
+
+        // Re-sync trail colour so it's visible immediately after respawn
+        if (_playerEnergy != null)
+        {
+            Color respawnColor = _playerEnergy.fullEnergyColor != Color.clear
+                ? _playerEnergy.fullEnergyColor : Color.white;
+            _playerEnergy.SyncTrailColor(respawnColor, _playerEnergy.trailBrightness);
+        }
 
         isDead = false;
     }

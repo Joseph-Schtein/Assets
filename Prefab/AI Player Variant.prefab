@@ -137,23 +137,23 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 18604373352453941, guid: 9f998dc5681878a48b54d15367bf5171, type: 3}
       propertyPath: m_Range
-      value: 250
+      value: 1000
       objectReference: {fileID: 0}
     - target: {fileID: 18604373352453941, guid: 9f998dc5681878a48b54d15367bf5171, type: 3}
       propertyPath: m_Color.b
-      value: 1
+      value: 0.5264151
       objectReference: {fileID: 0}
     - target: {fileID: 18604373352453941, guid: 9f998dc5681878a48b54d15367bf5171, type: 3}
       propertyPath: m_Color.g
-      value: 0.14760149
+      value: 0.98699963
       objectReference: {fileID: 0}
     - target: {fileID: 18604373352453941, guid: 9f998dc5681878a48b54d15367bf5171, type: 3}
       propertyPath: m_Color.r
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 18604373352453941, guid: 9f998dc5681878a48b54d15367bf5171, type: 3}
       propertyPath: m_Intensity
-      value: 300000000
+      value: 2e+10
       objectReference: {fileID: 0}
     - target: {fileID: 18604373352453941, guid: 9f998dc5681878a48b54d15367bf5171, type: 3}
       propertyPath: m_SpotAngle
@@ -163,6 +163,10 @@ PrefabInstance:
       propertyPath: m_InnerSpotAngle
       value: 20
       objectReference: {fileID: 0}
+    - target: {fileID: 3669297735382523640, guid: 9f998dc5681878a48b54d15367bf5171, type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 2f2dd807e9cd26d408a4e9da4a84e4d4, type: 2}
     - target: {fileID: 3669297735382523640, guid: 9f998dc5681878a48b54d15367bf5171, type: 3}
       propertyPath: m_Time
       value: 3
@@ -365,7 +369,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6506517200833656388, guid: 9f998dc5681878a48b54d15367bf5171, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 16
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 7704288681378416233, guid: 9f998dc5681878a48b54d15367bf5171, type: 3}
