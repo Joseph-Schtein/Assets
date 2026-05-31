@@ -262,15 +262,15 @@ public class PlayerEnergy : MonoBehaviour
     {
         float pct = currentEnergy / maxEnergy;
 
-        // Spot light stays at constant full intensity
+        // Spot light intensity scales with energy — shrinks to 0 at empty
         if (sparkLight != null)
-            sparkLight.intensity = maxLightIntensity * 5f;
+            sparkLight.intensity = pct * maxLightIntensity * 5f;
 
         if (sparkTrail != null)
         {
-            // Trail width scales with energy — minimum 3 so it's always visible
-            float w = Mathf.Max(3f, pct * maxTrailWidth);
-            if (Mathf.Abs(sparkTrail.widthMultiplier - w) > 0.05f)
+            // Trail width scales with energy — shrinks to 0 at empty
+            float w = pct * maxTrailWidth;
+            if (Mathf.Abs(sparkTrail.widthMultiplier - w) > 0.01f)
                 sparkTrail.widthMultiplier = w;
 
             // Force the trail gradient to match the spotlight color every frame.
