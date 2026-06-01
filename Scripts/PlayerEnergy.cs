@@ -1,6 +1,10 @@
 using UnityEngine;
 using TMPro;
 
+// Run after LightcycleAI (which moves/rotates the player in Update).
+// A higher number means later execution — ensures our LateUpdate corrections
+// are the final word on the spotlight position and rotation each frame.
+[DefaultExecutionOrder(100)]
 public class PlayerEnergy : MonoBehaviour
 {
     // ═══════════════════════════════════════════════════════════════════════
@@ -30,6 +34,10 @@ public class PlayerEnergy : MonoBehaviour
     public float maxTrailTime = 3f;
     public float maxTrailWidth = 3f;
     public float trailBrightness = 500000f;
+    [Tooltip("Spotlight outer angle (degrees) at full energy — scales with trail width.")]
+    public float maxSpotAngle = 80f;
+    [Tooltip("Spotlight inner angle (degrees) at full energy — scales with trail width.")]
+    public float maxInnerSpotAngle = 60f;
 
     [Header("Runtime State")]
     public float currentEnergy;
@@ -70,7 +78,7 @@ public class PlayerEnergy : MonoBehaviour
         // Non-game scenes (MainMenu) lack bloom, so cap HDR values
         if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != "SampleScene")
         {
-            maxLightIntensity = 3e+11f;
+            maxLightIntensity = 1e+11f;
             trailBrightness = 5f;
         }
 
@@ -262,9 +270,27 @@ public class PlayerEnergy : MonoBehaviour
     {
         float pct = currentEnergy / maxEnergy;
 
-        // Spot light intensity scales with energy — shrinks to 0 at empty
+        // Spot light intensity AND angle — angle is derived from trail width so the
+        // spotlight footprint on the ground matches the trail renderer width exactly.
         if (sparkLight != null)
+        {
             sparkLight.intensity = pct * maxLightIntensity * 5f;
+
+            // ── Angle calculation ─────────────────────────────────────────────────
+            // Current trail width in world units (matches widthMultiplier set below)
+            float trailW = pct * maxTrailWidth;
+
+            // Height of the light above the ground — use the light's world Y.
+            float lightHeight = Mathf.Max(sparkLight.transform.position.y, 0.1f);
+
+            // Half-angle whose tangent = (half trail width) / height → full outer angle
+            float outerAngle = 2f * Mathf.Atan2(trailW * 0.5f, lightHeight) * Mathf.Rad2Deg;
+            // Clamp to Unity's valid spotlight range [1°, 179°]
+            outerAngle = Mathf.Clamp(outerAngle, 1f, 179f);
+            sparkLight.spotAngle = outerAngle;
+            // Inner angle at ~80 % of outer for a soft falloff edge
+            sparkLight.innerSpotAngle = Mathf.Clamp(outerAngle * 0.8f, 0f, outerAngle);
+        }
 
         if (sparkTrail != null)
         {
@@ -294,12 +320,28 @@ public class PlayerEnergy : MonoBehaviour
         }
     }
 
-    // Safety net: re-apply the gradient in LateUpdate as well, in case something
-    // else overwrites it during Update (e.g. another script or internal Unity code).
+    // LateUpdate runs after ALL Update() calls — movement is fully resolved here.
     void LateUpdate()
     {
-        if (isDead || sparkTrail == null) return;
-        ApplyTrailGradient();
+        if (isDead) return;
+
+        // Re-apply the gradient in case something overwrote it during Update.
+        if (sparkTrail != null)
+            ApplyTrailGradient();
+
+        // ── Pin spotlight exactly at player centre, pointing straight down ────────
+        // localPosition = zero keeps the light at the player pivot (same XZ as trail).
+        // We derive the required LOCAL rotation so the WORLD rotation is exactly
+        // straight-down (Euler 90,0,0) regardless of how the parent (bike) has turned.
+        if (sparkLight != null)
+        {
+            sparkLight.transform.localPosition = Vector3.zero;
+            // Target world rotation = straight down (90° around world X)
+            Quaternion worldDown = Quaternion.Euler(90f, 0f, 0f);
+            // Required local rotation = parent⁻¹ * worldDown
+            sparkLight.transform.localRotation =
+                Quaternion.Inverse(sparkLight.transform.parent.rotation) * worldDown;
+        }
     }
 
     /// <summary>

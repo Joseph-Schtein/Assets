@@ -56,6 +56,10 @@ public class LightSource : MonoBehaviour
         // Initialise at zero so the expand phase starts clean
         ApplyLight(0f, 0f);
 
+        // Arrows should show 100% brightness from the moment the spotlight appears,
+        // so seed TimeRemaining at its maximum before the lifecycle begins.
+        TimeRemaining = stayDuration + shrinkDuration;
+
         StartCoroutine(LifecycleRoutine());
     }
 

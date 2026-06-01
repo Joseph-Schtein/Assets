@@ -2187,6 +2187,10 @@ PrefabInstance:
       value: 50
       objectReference: {fileID: 0}
     - target: {fileID: 4332888496343399295, guid: 9f998dc5681878a48b54d15367bf5171, type: 3}
+      propertyPath: secondGlowIntensity
+      value: 50
+      objectReference: {fileID: 0}
+    - target: {fileID: 4332888496343399295, guid: 9f998dc5681878a48b54d15367bf5171, type: 3}
       propertyPath: secondColorFullTime.b
       value: 0
       objectReference: {fileID: 0}
@@ -2210,6 +2214,10 @@ PrefabInstance:
       propertyPath: secondColorShrinking.r
       value: 0.5245282
       objectReference: {fileID: 0}
+    - target: {fileID: 4332888496343399295, guid: 9f998dc5681878a48b54d15367bf5171, type: 3}
+      propertyPath: secondGlowIntensityMax
+      value: 50
+      objectReference: {fileID: 0}
     - target: {fileID: 4964402326849022637, guid: 9f998dc5681878a48b54d15367bf5171, type: 3}
       propertyPath: drainRate
       value: 2.5
@@ -2224,7 +2232,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4964402326849022637, guid: 9f998dc5681878a48b54d15367bf5171, type: 3}
       propertyPath: trailBrightness
-      value: 1e+12
+      value: 1e+11
       objectReference: {fileID: 0}
     - target: {fileID: 4964402326849022637, guid: 9f998dc5681878a48b54d15367bf5171, type: 3}
       propertyPath: maxLightIntensity

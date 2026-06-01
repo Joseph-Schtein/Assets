@@ -13,77 +13,70 @@ using UnityEngine;
 public class ArrowPointer : MonoBehaviour
 {
     [Header("References")]
-    public Transform    playerTransform;   // The Player's Transform
+    public Transform playerTransform;   // The Player's Transform
     public PlayerEnergy playerEnergy;      // Reads isIlluminated for zone enter/exit
 
     [Header("Orbit Settings")]
     [SerializeField] private float orbitRadius = 4f;    // Distance in front of the player
     [SerializeField] private float hoverHeight = 1.5f;  // Y offset above the player (primary arrow)
-    [SerializeField] private float secondHoverHeight = 0.5f;  // Y offset for the secondary arrow
+    [SerializeField] private float secondHoverHeight = 1.5f;  // Y offset for the secondary arrow
 
     [Header("Arrow Shape")]
     [SerializeField] private float stemLength = 1.0f;   // Shaft length
-    [SerializeField] private float stemWidth  = 0.4f;   // Shaft width
-    [SerializeField] private float tipLength  = 0.8f;   // Arrowhead length
-    [SerializeField] private float tipWidth   = 0.9f;   // Arrowhead base width
+    [SerializeField] private float stemWidth = 0.4f;   // Shaft width
+    [SerializeField] private float tipLength = 0.8f;   // Arrowhead length
+    [SerializeField] private float tipWidth = 0.9f;   // Arrowhead base width
 
     [Header("Visuals")]
-    [Tooltip("Arrow color when the spotlight has plenty of time left.")]
+    [Tooltip("Arrow color (stays constant — only brightness varies).")]
     [SerializeField] private Color colorFullTime = new Color(1f, 1f, 0f, 1f);  // bright yellow
-    [Tooltip("Arrow color when the spotlight is about to shrink.")]
-    [SerializeField] private Color colorShrinking = new Color(0.25f, 0.25f, 0f, 1f); // dull yellow
-    [SerializeField] private float glowIntensityMin = 2f;
+    [Tooltip("Glow intensity at 70% (dying spotlight).")]
+    [SerializeField] private float glowIntensityMin = 4.2f;
+    [Tooltip("Glow intensity at 100% (fresh spotlight).")]
     [SerializeField] private float glowIntensityMax = 6f;
-    [SerializeField] private float pulseSpeed       = 3.5f;
-
     [Header("Second Arrow Visuals")]
-    [Tooltip("Base color for the second arrow (full-time).")]
-    [SerializeField] private Color secondColorFullTime   = new Color(0.4f, 0.8f, 1f, 1f);  // cool cyan-white
-    [Tooltip("Urgency color for the second arrow.")]
-    [SerializeField] private Color secondColorShrinking  = new Color(0.1f, 0.2f, 0.25f, 1f);
-    [Tooltip("Glow intensity for the secondary arrow — intentionally dimmer.")]
-    [SerializeField] private float secondGlowIntensity   = 1.2f;
+    [Tooltip("Glow intensity for the secondary arrow (now matches primary).")]
+    // secondary uses same intensity as primary now
 
     [Header("Search")]
     [SerializeField] private float updateInterval = 0.15f;
 
     // ── Primary arrow internals ───────────────────────────────────────────────
-    private MeshRenderer  _mr;
-    private Material      _mat;
-    private Transform     _target;
-    private LightSource   _targetLightSource;
-    private GameObject    _arrowVisual;
+    private MeshRenderer _mr;
+    private Transform _target;
+    private LightSource _targetLightSource;
+    private GameObject _arrowVisual;
 
     // ── Secondary arrow internals ─────────────────────────────────────────────
-    private MeshRenderer  _mr2;
-    private Material      _mat2;
-    private Transform     _target2;
-    private LightSource   _targetLightSource2;
-    private GameObject    _arrowVisual2;
+    private MeshRenderer _mr2;
+    private Transform _target2;
+    private LightSource _targetLightSource2;
+    private GameObject _arrowVisual2;
 
-    private Mesh          _mesh;
-    private List<Vector3> _vertices  = new List<Vector3>();
-    private List<int>     _triangles = new List<int>();
+    private Mesh _mesh;
+    private MaterialPropertyBlock _propBlock;
 
     // ─────────────────────────────────────────────────────────────────────────
     void Awake()
     {
+        _propBlock = new MaterialPropertyBlock();
+
+        Shader urpUnlit = Shader.Find("Universal Render Pipeline/Unlit");
+        Shader fallback = Shader.Find("Sprites/Default");
+        Material baseMat = new Material(urpUnlit != null ? urpUnlit : fallback);
+        baseMat.EnableKeyword("_EMISSION");
+        baseMat.enableInstancing = true; // Force instancing
+
         // ── Primary arrow ─────────────────────────────────────────────────────
         _arrowVisual = new GameObject("ArrowVisual");
         _arrowVisual.transform.SetParent(null);
 
         MeshFilter mf = _arrowVisual.AddComponent<MeshFilter>();
-        _mr           = _arrowVisual.AddComponent<MeshRenderer>();
+        _mr = _arrowVisual.AddComponent<MeshRenderer>();
 
-        _mesh      = new Mesh { name = "ArrowMesh" };
-        mf.mesh    = _mesh;
-
-        _mat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-        if (_mat == null)
-            _mat = new Material(Shader.Find("Sprites/Default"));
-
-        _mat.SetColor("_BaseColor", colorFullTime * glowIntensityMin);
-        _mr.material = _mat;
+        _mesh = new Mesh { name = "ArrowMesh" };
+        mf.mesh = _mesh;
+        _mr.sharedMaterial = baseMat;
 
         _arrowVisual.transform.rotation = Quaternion.identity;
 
@@ -93,17 +86,11 @@ public class ArrowPointer : MonoBehaviour
         _arrowVisual2 = new GameObject("ArrowVisual2");
         _arrowVisual2.transform.SetParent(null);
 
-        Mesh mesh2        = new Mesh { name = "ArrowMesh2" };
-        MeshFilter mf2    = _arrowVisual2.AddComponent<MeshFilter>();
-        _mr2              = _arrowVisual2.AddComponent<MeshRenderer>();
-        mf2.mesh          = mesh2;
-
-        _mat2 = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-        if (_mat2 == null)
-            _mat2 = new Material(Shader.Find("Sprites/Default"));
-
-        _mat2.SetColor("_BaseColor", secondColorFullTime * secondGlowIntensity);
-        _mr2.material = _mat2;
+        Mesh mesh2 = new Mesh { name = "ArrowMesh2" };
+        MeshFilter mf2 = _arrowVisual2.AddComponent<MeshFilter>();
+        _mr2 = _arrowVisual2.AddComponent<MeshRenderer>();
+        mf2.mesh = mesh2;
+        _mr2.sharedMaterial = baseMat;
 
         _arrowVisual2.transform.rotation = Quaternion.identity;
 
@@ -117,22 +104,27 @@ public class ArrowPointer : MonoBehaviour
     {
         bool inZone = playerEnergy != null && playerEnergy.isIlluminated;
 
+        // Force height to be identical regardless of Inspector overrides
+        secondHoverHeight = hoverHeight;
+
         // ── Primary arrow ─────────────────────────────────────────────────────
         UpdateArrow(
             _target, _targetLightSource,
-            _arrowVisual, _mr, _mat,
+            _arrowVisual, _mr,
             hoverHeight,
-            colorFullTime, colorShrinking,
+            colorFullTime,
             glowIntensityMin,
+            glowIntensityMax,
             inZone);
 
         // ── Secondary arrow ───────────────────────────────────────────────────
         UpdateArrow(
             _target2, _targetLightSource2,
-            _arrowVisual2, _mr2, _mat2,
+            _arrowVisual2, _mr2,
             secondHoverHeight,
-            secondColorFullTime, secondColorShrinking,
-            secondGlowIntensity,
+            colorFullTime,
+            glowIntensityMin,
+            glowIntensityMax,
             inZone);
     }
 
@@ -140,16 +132,15 @@ public class ArrowPointer : MonoBehaviour
     /// Shared update logic for a single arrow visual.
     /// </summary>
     private void UpdateArrow(
-        Transform    target,
-        LightSource  targetLS,
-        GameObject   visual,
+        Transform target,
+        LightSource targetLS,
+        GameObject visual,
         MeshRenderer mr,
-        Material     mat,
-        float        yOffset,
-        Color        colorFull,
-        Color        colorUrgent,
-        float        intensity,
-        bool         inZone)
+        float yOffset,
+        Color arrowColor,
+        float intensityMin,
+        float intensityMax,
+        bool inZone)
     {
         if (playerTransform == null || target == null) { SetVisibleObj(mr, visual, false); return; }
 
@@ -167,21 +158,16 @@ public class ArrowPointer : MonoBehaviour
         if (inZone) { SetVisibleObj(mr, visual, false); return; }
         SetVisibleObj(mr, visual, true);
 
-        // Intensity driven by the spotlight's remaining lifetime, NOT player energy.
-        // t = 1 → spotlight just spawned  → 100% intensity (full glow)
-        // t = 0 → spotlight about to die  → 50%  intensity (visible but clearly dimming)
-        // Default t = 1f when LightSource can't be read so the arrow is never black.
-        float t = 1f;
-        if (targetLS != null && targetLS.MaxTimeRemaining > 0f)
-            t = Mathf.Clamp01(targetLS.TimeRemaining / targetLS.MaxTimeRemaining);
-
-        // Lerp from a colour that still reads clearly on dark backgrounds (colorUrgent at 50%) to
-        // the fully-bright fresh colour, so the arrow is always visible.
-        Color baseColor = Color.Lerp(colorUrgent, colorFull, t);
-
-        // Scale overall glow: 100% at t=1 (fresh), 50% at t=0 (dying)
-        float glow = Mathf.Lerp(intensity * 0.5f, intensity, t);
-        mat.SetColor("_BaseColor", baseColor * glow);
+        // ALWAYS use intensityMax so the arrow stays bright yellow and never drops below the bloom threshold.
+        float glow = intensityMax;
+        Color finalColor = arrowColor * glow;
+        finalColor.a = 1f; // Prevent alpha multiplication issues
+        
+        mr.GetPropertyBlock(_propBlock);
+        _propBlock.SetColor("_BaseColor", finalColor);
+        _propBlock.SetColor("_Color", finalColor);
+        _propBlock.SetColor("_EmissionColor", finalColor);
+        mr.SetPropertyBlock(_propBlock);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -200,22 +186,22 @@ public class ArrowPointer : MonoBehaviour
     private void GenerateArrow(Mesh mesh)
     {
         var verts = new List<Vector3>();
-        var tris  = new List<int>();
+        var tris = new List<int>();
 
-        float sw = stemWidth  * 0.5f;
-        float tw = tipWidth   * 0.5f;
+        float sw = stemWidth * 0.5f;
+        float tw = tipWidth * 0.5f;
 
         verts.Add(new Vector3(-sw, 0f, 0f));
         verts.Add(new Vector3(-sw, 0f, stemLength));
-        verts.Add(new Vector3( sw, 0f, 0f));
-        verts.Add(new Vector3( sw, 0f, stemLength));
+        verts.Add(new Vector3(sw, 0f, 0f));
+        verts.Add(new Vector3(sw, 0f, stemLength));
 
         tris.Add(0); tris.Add(1); tris.Add(2);
         tris.Add(2); tris.Add(1); tris.Add(3);
 
         verts.Add(new Vector3(-tw, 0f, stemLength));
-        verts.Add(new Vector3( tw, 0f, stemLength));
-        verts.Add(new Vector3(  0f, 0f, stemLength + tipLength));
+        verts.Add(new Vector3(tw, 0f, stemLength));
+        verts.Add(new Vector3(0f, 0f, stemLength + tipLength));
 
         tris.Add(4); tris.Add(6); tris.Add(5);
 
@@ -243,8 +229,8 @@ public class ArrowPointer : MonoBehaviour
 
         GameObject[] spots = GameObject.FindGameObjectsWithTag("Spotlight");
 
-        Transform   nearest      = null;  LightSource nearestLS   = null;  float nearestDist   = Mathf.Infinity;
-        Transform   second       = null;  LightSource secondLS    = null;  float secondDist    = Mathf.Infinity;
+        Transform nearest = null; LightSource nearestLS = null; float nearestDist = Mathf.Infinity;
+        Transform second = null; LightSource secondLS = null; float secondDist = Mathf.Infinity;
 
         foreach (GameObject spot in spots)
         {
@@ -252,45 +238,45 @@ public class ArrowPointer : MonoBehaviour
             if (d < nearestDist)
             {
                 // Push old nearest down to second
-                second    = nearest;    secondLS  = nearestLS;   secondDist  = nearestDist;
-                nearest   = spot.transform;
+                second = nearest; secondLS = nearestLS; secondDist = nearestDist;
+                nearest = spot.transform;
                 nearestLS = spot.GetComponent<LightSource>();
                 nearestDist = d;
             }
             else if (d < secondDist)
             {
-                second    = spot.transform;
-                secondLS  = spot.GetComponent<LightSource>();
+                second = spot.transform;
+                secondLS = spot.GetComponent<LightSource>();
                 secondDist = d;
             }
         }
 
-        _target            = nearest;
+        _target = nearest;
         _targetLightSource = nearestLS;
-        _target2           = second;
+        _target2 = second;
         _targetLightSource2 = secondLS;
 
         if (nearest == null) SetVisible(false);
-        if (second  == null) SetVisibleObj(_mr2, _arrowVisual2, false);
+        if (second == null) SetVisibleObj(_mr2, _arrowVisual2, false);
     }
 
     private void SetVisible(bool show)
     {
-        if (_mr  != null) _mr.enabled  = show;
-        if (_arrowVisual  != null) _arrowVisual.SetActive(show);
+        if (_mr != null) _mr.enabled = show;
+        if (_arrowVisual != null) _arrowVisual.SetActive(show);
         if (_mr2 != null) _mr2.enabled = show;
         if (_arrowVisual2 != null) _arrowVisual2.SetActive(show);
     }
 
     private static void SetVisibleObj(MeshRenderer mr, GameObject visual, bool show)
     {
-        if (mr     != null) mr.enabled = show;
+        if (mr != null) mr.enabled = show;
         if (visual != null) visual.SetActive(show);
     }
 
     void OnDestroy()
     {
-        if (_arrowVisual  != null) Destroy(_arrowVisual);
+        if (_arrowVisual != null) Destroy(_arrowVisual);
         if (_arrowVisual2 != null) Destroy(_arrowVisual2);
     }
 }
