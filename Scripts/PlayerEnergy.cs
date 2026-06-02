@@ -335,7 +335,9 @@ public class PlayerEnergy : MonoBehaviour
         // straight-down (Euler 90,0,0) regardless of how the parent (bike) has turned.
         if (sparkLight != null)
         {
-            sparkLight.transform.localPosition = Vector3.zero;
+            // Lift the light source up to prevent extreme >170 degree spotlight angles
+            // which cause Unity's shadow mapping and lighting to flicker.
+            sparkLight.transform.localPosition = new Vector3(0f, 2f, 0f);
             // Target world rotation = straight down (90° around world X)
             Quaternion worldDown = Quaternion.Euler(90f, 0f, 0f);
             // Required local rotation = parent⁻¹ * worldDown

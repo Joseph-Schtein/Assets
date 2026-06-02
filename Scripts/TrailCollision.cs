@@ -88,7 +88,7 @@ public class TrailCollision : MonoBehaviour
 
         Vector3 direction = (transform.position - lastDropPosition).normalized;
         segment.transform.position = lastDropPosition + (direction * (distance * 0.5f));
-        segment.transform.position = new Vector3(segment.transform.position.x, 1f, segment.transform.position.z);
+        segment.transform.position = new Vector3(segment.transform.position.x, 0.1f, segment.transform.position.z);
         
         if (direction != Vector3.zero)
         {

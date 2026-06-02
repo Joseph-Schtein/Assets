@@ -66,8 +66,8 @@ public class AISpawner : MonoBehaviour
             newAI.name = randomName;
             newAI.tag = "AI"; // Ensure the tag is always set regardless of prefab default
 
-            // Pick a random color and apply it immediately
-            Color bikeColor = Random.ColorHSV(0f, 1f, 0.8f, 1f, 0.9f, 1f);
+            // Pick a bright neon color with slightly lower saturation so it blooms into a white core like the Player's yellow
+            Color bikeColor = Random.ColorHSV(0f, 1f, 0.5f, 0.7f, 1f, 1f);
             _spawnedAIs.Add(newAI);
             _spawnedColors.Add(bikeColor);
 

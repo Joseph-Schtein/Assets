@@ -596,7 +596,7 @@ public class LightcycleAI : Agent
         transform.position += currentMoveDirection * currentSpeed * Time.deltaTime;
         transform.position = new Vector3(
             Mathf.Clamp(transform.position.x, -arenaLimit, arenaLimit),
-            1f,
+            0.1f,
             Mathf.Clamp(transform.position.z, -arenaLimit, arenaLimit));
 
         if (currentMoveDirection != Vector3.zero)
