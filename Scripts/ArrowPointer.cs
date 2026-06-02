@@ -30,7 +30,7 @@ public class ArrowPointer : MonoBehaviour
     [Header("Visuals")]
     [Tooltip("Arrow color (stays constant — only brightness varies).")]
     [SerializeField] private Color colorFullTime = new Color(1f, 1f, 0f, 1f);  // bright yellow
-    [Tooltip("Glow intensity at 70% (dying spotlight).")]
+    [Tooltip("Glow intensity at 50% (dying spotlight — arrow fades to half brightness).")]
     [SerializeField] private float glowIntensityMin = 4.2f;
     [Tooltip("Glow intensity at 100% (fresh spotlight).")]
     [SerializeField] private float glowIntensityMax = 6f;
@@ -158,8 +158,14 @@ public class ArrowPointer : MonoBehaviour
         if (inZone) { SetVisibleObj(mr, visual, false); return; }
         SetVisibleObj(mr, visual, true);
 
-        // ALWAYS use intensityMax so the arrow stays bright yellow and never drops below the bloom threshold.
-        float glow = intensityMax;
+        // Lerp glow from 100% (fresh spotlight) → 50% (dying spotlight) based on remaining lifetime.
+        float lifetimeRatio = 1f; // default to full if no LightSource
+        if (targetLS != null && targetLS.MaxTimeRemaining > 0f)
+        {
+            lifetimeRatio = Mathf.Clamp01(targetLS.TimeRemaining / targetLS.MaxTimeRemaining);
+        }
+        // Map ratio 0→1 to intensity range: 50% → 100% of intensityMax
+        float glow = Mathf.Lerp(intensityMax * 0.5f, intensityMax, lifetimeRatio);
         Color finalColor = arrowColor * glow;
         finalColor.a = 1f; // Prevent alpha multiplication issues
         
