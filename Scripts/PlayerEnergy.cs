@@ -251,7 +251,7 @@ public class PlayerEnergy : MonoBehaviour
         if (trailMat != null)
         {
             Color matSource = (sparkLight != null) ? sparkLight.color : colour;
-            float safe = Mathf.Clamp(brightness, 1f, 200f);
+            float safe = Mathf.Clamp(brightness, 1f, 500f);
             Color hdr = matSource * safe;
             hdr.a = 1f;
             trailMat.SetColor("_BaseColor", hdr);
