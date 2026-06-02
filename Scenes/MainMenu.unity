@@ -845,9 +845,6 @@ MonoBehaviour:
   offset: {x: 0, y: 20, z: 0}
   smoothSpeed: 5
   lookStraightDown: 0
-  minZoom: 0.5
-  maxZoom: 3
-  zoomSpeed: 2
 --- !u!114 &1207946071
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1059,7 +1056,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 217}
+  m_AnchoredPosition: {x: 0, y: 305}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1568822983
@@ -1093,19 +1090,19 @@ MonoBehaviour:
 
 
 
-    DASH Hold SPACE
+    For Dash Hold Space
 
-    to spend your Energy
+    to spend your energy
     for a burst of speed. Use this to cut off your opponents! But be aware using
-    it to much can drain you power
+    it much to faster then the speed multiplaiyer.
 
 
 
     COMBAT
 
-    Your lightcycle leaves behind
-    a solid wall of light. Trap your opponents and force them to crash into your
-    trail to eliminate them!
+    Your lightcycle
+    leaves behind a solid wall of light. Trap your opponents and force them to crash
+    into your trail to eliminate them!
 
 
 
@@ -1113,26 +1110,27 @@ MonoBehaviour:
 
 
 
-    Beware the Dark:
-    If you stay in the dark areas for too long, your power will drain until you die!
+    Beware
+    the Dark: If you stay in the dark areas for too long, your power will drain until
+    you die!
 
-    Find
-    the Light: Charger zones (Light Cones) spawn around the arena. Follow the Arrow
-    Pointer around your spark to find the nearest light cone and recharge your energy.
+
+    Find the Light: Charger zones (Light Cones) spawn around the arena.
+    Follow the Arrow Pointer around your spark to find the nearest light cone and
+    recharge your energy.
 
 
     SCORING
 
-    Your
-    overall score is calculated as: (5*Kills) - Deaths.
+    Your overall score is calculated as:
+    (3*Kills) - Deaths.
 
-    Tie Breaker: If scores
-    are tied, the player with the highest remaining charge level wins!
+    Tie Breaker: If scores are tied, the player with the
+    highest remaining charge level wins!
 
 
 
-    Good
-    luck on the grid!'
+    Good luck on the grid!'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}

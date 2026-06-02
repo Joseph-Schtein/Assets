@@ -36,7 +36,7 @@ public class LightcycleAI : Agent
     public float lookAheadDistance = 25f;
 
     [Header("Dash Settings")]
-    public float dashSpeedMultiplier = 2f;
+    public float dashSpeedMultiplier = 1.6f;
 
     [Header("Personality / Dynamic")]
     public float wanderAmplitude = 30f;

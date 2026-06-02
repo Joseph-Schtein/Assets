@@ -10,7 +10,7 @@ public class PlayerMovement : MonoBehaviour
     public float mouseTurnSpeed = 5f;
 
     [Header("Dash Settings")]
-    public float dashSpeedMultiplier = 2f;
+    public float dashSpeedMultiplier = 1.6f;
 
     private CharacterController controller;
     private PlayerEnergy energy;
