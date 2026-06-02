@@ -30,10 +30,10 @@ public class ArrowPointer : MonoBehaviour
     [Header("Visuals")]
     [Tooltip("Arrow color (stays constant — only brightness varies).")]
     [SerializeField] private Color colorFullTime = new Color(1f, 1f, 0f, 1f);  // bright yellow
-    [Tooltip("Glow intensity at 50% (dying spotlight — arrow fades to half brightness).")]
-    [SerializeField] private float glowIntensityMin = 4.2f;
-    [Tooltip("Glow intensity at 100% (fresh spotlight).")]
-    [SerializeField] private float glowIntensityMax = 6f;
+    [Tooltip("Emission glow at 50% (dying spotlight — arrow fades to half bloom).")]
+    [SerializeField] private float glowIntensityMin = 1f;
+    [Tooltip("Emission glow at 100% (fresh spotlight). Values above 1 create bloom.")]
+    [SerializeField] private float glowIntensityMax = 2f;
     [Header("Second Arrow Visuals")]
     [Tooltip("Glow intensity for the secondary arrow (now matches primary).")]
     // secondary uses same intensity as primary now
@@ -64,8 +64,9 @@ public class ArrowPointer : MonoBehaviour
         Shader urpUnlit = Shader.Find("Universal Render Pipeline/Unlit");
         Shader fallback = Shader.Find("Sprites/Default");
         Material baseMat = new Material(urpUnlit != null ? urpUnlit : fallback);
-        baseMat.EnableKeyword("_EMISSION");
-        baseMat.enableInstancing = true; // Force instancing
+        baseMat.DisableKeyword("_EMISSION");  // No emission — prevents bloom in builds
+        baseMat.SetColor("_EmissionColor", Color.black);
+        baseMat.enableInstancing = true;
 
         // ── Primary arrow ─────────────────────────────────────────────────────
         _arrowVisual = new GameObject("ArrowVisual");
@@ -158,21 +159,22 @@ public class ArrowPointer : MonoBehaviour
         if (inZone) { SetVisibleObj(mr, visual, false); return; }
         SetVisibleObj(mr, visual, true);
 
-        // Lerp glow from 100% (fresh spotlight) → 50% (dying spotlight) based on remaining lifetime.
-        float lifetimeRatio = 1f; // default to full if no LightSource
+        // Lerp brightness from 100% (fresh spotlight) → 50% (dying spotlight).
+        float lifetimeRatio = 1f;
         if (targetLS != null && targetLS.MaxTimeRemaining > 0f)
         {
             lifetimeRatio = Mathf.Clamp01(targetLS.TimeRemaining / targetLS.MaxTimeRemaining);
         }
-        // Map ratio 0→1 to intensity range: 50% → 100% of intensityMax
-        float glow = Mathf.Lerp(intensityMax * 0.5f, intensityMax, lifetimeRatio);
-        Color finalColor = arrowColor * glow;
-        finalColor.a = 1f; // Prevent alpha multiplication issues
-        
+
+        // Brightness stays in LDR range [0.5 .. 1.0] — no HDR, no bloom.
+        float brightness = Mathf.Lerp(0.5f, 1f, lifetimeRatio);
+        Color finalColor = arrowColor * brightness;
+        finalColor.a = 1f;
+
         mr.GetPropertyBlock(_propBlock);
         _propBlock.SetColor("_BaseColor", finalColor);
         _propBlock.SetColor("_Color", finalColor);
-        _propBlock.SetColor("_EmissionColor", finalColor);
+        _propBlock.SetColor("_EmissionColor", Color.black); // ensure no emission
         mr.SetPropertyBlock(_propBlock);
     }
 
