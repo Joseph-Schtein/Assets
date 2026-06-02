@@ -1086,7 +1086,7 @@ MonoBehaviour:
     MOVEMENT
 
     Use your Mouse to smoothly steer your
-    lightcycle around the arena.
+    light around the arena.
 
 
 
@@ -1100,7 +1100,7 @@ MonoBehaviour:
 
     COMBAT
 
-    Your lightcycle
+    Your light
     leaves behind a solid wall of light. Trap your opponents and force them to crash
     into your trail to eliminate them!
 
@@ -1108,25 +1108,24 @@ MonoBehaviour:
 
     SURVIVAL & LIGHT CONES
 
-
-
     Beware
     the Dark: If you stay in the dark areas for too long, your power will drain until
     you die!
 
 
     Find the Light: Charger zones (Light Cones) spawn around the arena.
-    Follow the Arrow Pointer around your spark to find the nearest light cone and
-    recharge your energy.
+    Follow the Arrow Pointers around your spark to find the nearest light cone and
+    recharge your energy. beware that the brighter the arrow the spotlight would
+    have more time before turning off.
 
 
     SCORING
 
-    Your overall score is calculated as:
-    (3*Kills) - Deaths.
+    Your overall score is calculated
+    as: (3*Kills) - Deaths.
 
-    Tie Breaker: If scores are tied, the player with the
-    highest remaining charge level wins!
+    Tie Breaker: If scores are tied, the player with
+    the highest remaining charge level wins!
 
 
 
